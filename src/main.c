@@ -1,32 +1,16 @@
 #include "main.h"
 
-void SystemClock_Config(void);
+static GPIO_InitTypeDef GPIOB_OutputLedConfig;
+static GPIO_InitTypeDef GPIOF_OutputLedConfig;
+static GPIO_InitTypeDef GPIOA_InputButtonConfig;
 
 int main ()
 {
     HAL_Init();
 
-    SystemClock_Config();
-    
-    // Enable GPIOB peripheral
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    RCC->AHBENR |= RCC_AHBENR_GPIOFEN;
+    SystemClockConfig();
 
-    // Setup pin B3 for output and push-pull
-    GPIOB->MODER &= ~GPIO_MODER_MODER3;
-    GPIOB->MODER |= GPIO_MODER_MODER3_0;
-    GPIOB->OTYPER &= ~GPIO_OTYPER_OT_3;
-
-    // Setup pin F4 for output and push-pull
-    GPIOF->MODER &= ~GPIO_MODER_MODER0;
-    GPIOF->MODER |= GPIO_MODER_MODER0_0;
-    GPIOF->OTYPER &= ~GPIO_OTYPER_OT_0;
-
-    // Setup pin B1 for input and pull up
-    GPIOA->MODER &= ~GPIO_MODER_MODER0;
-    GPIOA->PUPDR &= ~GPIO_PUPDR_PUPDR0;
-    GPIOA->PUPDR |= GPIO_PUPDR_PUPDR0_0;
+    SetupGPIO();
 
     int flashDelay = 0;
     while (1)
@@ -34,28 +18,58 @@ int main ()
         if (flashDelay >= 100000)
         {
             flashDelay = 0;
-            GPIOB->ODR ^= (1 << 3);
+            HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
         }
 
-        if (~GPIOA->IDR & (1 << 0))
+        if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
         {
-            GPIOF->BSRR = (1 << 0);
+            HAL_GPIO_WritePin(GPIOF, GPIO_PIN_0, GPIO_PIN_SET);
         }
         else
         {
-            GPIOF->BRR = (1 << 0);
+            HAL_GPIO_WritePin(GPIOF, GPIO_PIN_0, GPIO_PIN_RESET);
         }
 
         flashDelay += 1;
     }
 }
 
-void SystemClock_Config(void)
+void SetupGPIO()
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOF_CLK_ENABLE();
+
+    // Configure the onboard LED
+    GPIOB_OutputLedConfig.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIOB_OutputLedConfig.Pull = GPIO_PULLUP;
+    GPIOB_OutputLedConfig.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIOB_OutputLedConfig.Pin = GPIO_PIN_3;
+
+    HAL_GPIO_Init(GPIOB, &GPIOB_OutputLedConfig);
+
+    // Configure the output LEDs
+    GPIOF_OutputLedConfig.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIOF_OutputLedConfig.Pull = GPIO_PULLUP;
+    GPIOF_OutputLedConfig.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIOF_OutputLedConfig.Pin = GPIO_PIN_0;
+
+    HAL_GPIO_Init(GPIOF, &GPIOF_OutputLedConfig);
+
+    GPIOA_InputButtonConfig.Mode = GPIO_MODE_INPUT;
+    GPIOA_InputButtonConfig.Pull = GPIO_PULLUP;
+    GPIOA_InputButtonConfig.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIOA_InputButtonConfig.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_3 | GPIO_PIN_4;
+
+    HAL_GPIO_Init(GPIOA, &GPIOA_InputButtonConfig);
+}
+
+void SystemClockConfig(void)
 {
     RCC_ClkInitTypeDef RCC_ClkInitStruct;
     RCC_OscInitTypeDef RCC_OscInitStruct;
 
-    /* No HSE Oscillator on Nucleo, Activate PLL with HSI as source */
+    // No HSE Oscillator on Nucleo, Activate PLL with HSI as source
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_NONE;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
@@ -63,18 +77,18 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct)!= HAL_OK)
     {
-        /* Initialization Error */
-        while(1); 
+        // Initialization Error
+        while(1);
     }
 
-    /* Select PLL as system clock source and configure the HCLK, PCLK1 clocks dividers */
+    // Select PLL as system clock source and configure the HCLK, PCLK1 clocks dividers
     RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1);
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1)!= HAL_OK)
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
     {
-        /* Initialization Error */
-        while(1); 
+        // Initialization Error
+        while(1);
     }
 }

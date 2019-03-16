@@ -11,4 +11,7 @@
     #include "stm32l0xx_hal.h"
 #endif
 
+void SetupGPIO();
+void SystemClockConfig(void);
+
 #endif
