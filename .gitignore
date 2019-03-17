@@ -54,3 +54,6 @@ dkms.conf
 
 # OSX metadata
 .DS_store
+
+# VS Code files
+.vscode/.*

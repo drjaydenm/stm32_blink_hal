@@ -42,6 +42,7 @@ CFLAGS += -mthumb
 CFLAGS += -Wall
 CFLAGS += -g
 CFLAGS += -O0
+CFLAGS += -std=c99
 CFLAGS += -D$(MCU_DEF)
 CFLAGS += -DMCU_CLASS_$(MCU_CLASS)
 
