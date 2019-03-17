@@ -1,9 +1,5 @@
 #include "main.h"
 
-static GPIO_InitTypeDef GPIOB_OutputLedConfig;
-static GPIO_InitTypeDef GPIOF_OutputLedConfig;
-static GPIO_InitTypeDef GPIOA_InputButtonConfig;
-
 int main ()
 {
     HAL_Init();
@@ -21,13 +17,16 @@ int main ()
             HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
         }
 
-        if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+        for (int i = 0; i < scanRowsCount; i++)
         {
-            HAL_GPIO_WritePin(GPIOF, GPIO_PIN_0, GPIO_PIN_SET);
-        }
-        else
-        {
-            HAL_GPIO_WritePin(GPIOF, GPIO_PIN_0, GPIO_PIN_RESET);
+            if (!HAL_GPIO_ReadPin(scanRows[i].Port, scanRows[i].Pin))
+            {
+                HAL_GPIO_WritePin(statusLeds[i].Port, statusLeds[i].Pin, GPIO_PIN_SET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(statusLeds[i].Port, statusLeds[i].Pin, GPIO_PIN_RESET);
+            }
         }
 
         flashDelay += 1;
@@ -36,32 +35,41 @@ int main ()
 
 void SetupGPIO()
 {
+    static GPIO_InitTypeDef GPIO_InitStruct;
+
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOF_CLK_ENABLE();
 
     // Configure the onboard LED
-    GPIOB_OutputLedConfig.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIOB_OutputLedConfig.Pull = GPIO_PULLUP;
-    GPIOB_OutputLedConfig.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIOB_OutputLedConfig.Pin = GPIO_PIN_3;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Pin = GPIO_PIN_3;
 
-    HAL_GPIO_Init(GPIOB, &GPIOB_OutputLedConfig);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // Configure the output LEDs
-    GPIOF_OutputLedConfig.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIOF_OutputLedConfig.Pull = GPIO_PULLUP;
-    GPIOF_OutputLedConfig.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIOF_OutputLedConfig.Pin = GPIO_PIN_0;
+    for (int i = 0; i < statusLedsCount; i++)
+    {
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Pin = statusLeds[i].Pin;
 
-    HAL_GPIO_Init(GPIOF, &GPIOF_OutputLedConfig);
+        HAL_GPIO_Init(statusLeds[i].Port, &GPIO_InitStruct);
+    }
 
-    GPIOA_InputButtonConfig.Mode = GPIO_MODE_INPUT;
-    GPIOA_InputButtonConfig.Pull = GPIO_PULLUP;
-    GPIOA_InputButtonConfig.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIOA_InputButtonConfig.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_3 | GPIO_PIN_4;
+    // Configure the input keys
+    for (int i = 0; i < scanRowsCount; i++)
+    {
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Pin = scanRows[i].Pin;
 
-    HAL_GPIO_Init(GPIOA, &GPIOA_InputButtonConfig);
+        HAL_GPIO_Init(scanRows[i].Port, &GPIO_InitStruct);
+    }
 }
 
 void SystemClockConfig(void)
